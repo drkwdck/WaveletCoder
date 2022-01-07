@@ -1,5 +1,7 @@
 // Simplest & slowest version of arithmetic codec (almost demo version)
 #include <stdio.h>
+#include <iostream>
+#include "wavelet2s.h"
 //для избежания переполнения:	MAX_FREQUENCY * (TOP_VALUE+1) < ULONG_MAX 
 //число MAX_FREQUENCY должно быть не менее, чем в 4 раза меньше TOP_VALUE 
 //число символов NO_OF_CHARS должно быть много меньше MAX_FREQUENCY 
@@ -217,14 +219,17 @@ void decode(void)
 int main(int argc, char **argv)
 {
         printf("\nAlpha version of arithmetic Codec\n");
-        if ( argc!=4 ||  argv[1][0]!='e' && argv[1][0]!='d' )
-                        printf("\nUsage: arcode e|d infile outfile \n");
-        else if ( (in=fopen(argv[2],"r+b"))==NULL )
-                        printf("\nIncorrect input file\n");
-        else if ( (out=fopen(argv[3],"w+b"))==NULL )
-                        printf("\nIncorrect output file\n");
-        else 
-        {
+
+        if ( argc!=4 ||  argv[1][0]!='e' && argv[1][0]!='d' ) {
+                printf("\nUsage: arcode e|d infile outfile \n");
+        }
+        else if ( (in=fopen(argv[2],"r+b"))==NULL ) {
+                printf("\nIncorrect input file\n");
+        }
+        else if ( (out=fopen(argv[3],"w+b"))==NULL ) {
+                printf("\nIncorrect output file\n");
+        }
+        else {
                 if (argv[1][0]=='e') encode(); else decode();
                 fclose(in);
                 fclose(out);
