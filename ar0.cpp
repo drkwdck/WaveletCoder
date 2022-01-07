@@ -1,7 +1,7 @@
 // Simplest & slowest version of arithmetic codec (almost demo version)
 #include <stdio.h>
 #include <iostream>
-#include "wavelet2s.h"
+#include "lib/wavelet2s.h"
 //для избежания переполнения:	MAX_FREQUENCY * (TOP_VALUE+1) < ULONG_MAX 
 //число MAX_FREQUENCY должно быть не менее, чем в 4 раза меньше TOP_VALUE 
 //число символов NO_OF_CHARS должно быть много меньше MAX_FREQUENCY 
