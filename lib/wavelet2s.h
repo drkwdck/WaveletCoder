@@ -66,10 +66,10 @@ using namespace std;
 
  void* branch_lp_hp_up(string ,vector<double> &, vector<double> &, vector<double> &);
 
-// void* dwt_2d(vector<vector<double> > &, int , string , vector<vector<double> > &
-  //              , vector<double> &) ;
+void* dwt_2d(vector<vector<double> > &, int , string , vector<vector<double> > &
+               , vector<double> &) ;
 
-// void* idwt_2d(vector<vector<double> > &,vector<double> &, string ,vector<vector<double> > &);
+void* idwt_2d(vector<vector<double> > &,vector<double> &, string ,vector<vector<double> > &);
 
  void* dyadic_zpad_2d(vector<vector<double> > &,vector<vector<double> > &);
 

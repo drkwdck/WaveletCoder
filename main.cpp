@@ -198,18 +198,58 @@ int decode_symbol(FILE* in)
         return symbol;
 }
 
+// Запись в файл вспомогательной информации для вейвлет преобрзования
+void write_vector_to_file(const std::vector<double>& myVector)
+{
+    std::ofstream ofs(wavelet_info_file, std::ios::out | std::ofstream::binary);
+    std::ostream_iterator<char> osi{ ofs };
+    const char* beginByte = (char*)&myVector[0];
+
+    const char* endByte = (char*)&myVector.back() + sizeof(double);
+    std::copy(beginByte, endByte, osi);
+}
+
+// Чтение из файла вспомогательной информации для вейвлет преобразования
+std::vector<double> read_vector_from_file()
+{
+    std::vector<char> buffer{};
+    std::ifstream ifs(wavelet_info_file, std::ios::in | std::ifstream::binary);
+    std::istreambuf_iterator<char> iter(ifs);
+    std::istreambuf_iterator<char> end{};
+    std::copy(iter, end, std::back_inserter(buffer));
+    std::vector<double> newVector(buffer.size() / sizeof(double));
+    memcpy(&newVector[0], &buffer[0], buffer.size());
+    return newVector;
+}
+
+
 // Вейвлет преобразование
-std::vector<double> wavelet_transform(std::vector<int> image_array) {
+std::vector<std::vector<double>> wavelet_transform(std::vector<std::vector<int>> image_array) {
         int wavelet_levels_count = 2;
         std::string nm = "db4";
 
-        std::vector<double> res;
+        // Приводим тип к double
+        std::vector<std::vector<double>> image_array_double;
 
         for (auto i = 0; i < image_array.size(); ++i) {
-                res.push_back((double) image_array[i]);
+                image_array_double[i] = std::vector<double>(image_array[i].size());
+
+                for (auto j = 0; j < image_array[i].size(); ++j) {
+                        image_array_double[i].push_back((double) image_array[i][j]);
+                }
         }
 
-        return res;
+        // Запускаем преобрзование
+        std::vector<double> flag;
+        int output_width, output_hight;
+        dwt_output_dim(image_array_double, output_width, output_hight);
+        std::vector<std::vector<double>> dwt_output(output_width, std::vector<double>(output_hight));
+
+        // dwt_2d(image_array_double, wavelet_levels_count, nm, dwt_output, flag);
+
+        write_vector_to_file(flag);
+
+        return dwt_output;
 } 
 
 // Загрузка изображения в массив
@@ -218,11 +258,17 @@ std::vector<int> load_image_to_vector(char* file_path) {
         int symbol;
         std::vector<int> loaded_image;
 
+int i = 0;
         while ( (symbol=getc(in))!=EOF )
         {
                 loaded_image.push_back(symbol);
+
+                if (symbol == 255) {
+                        ++i;
+                } 
         }
 
+        std::cout <<"Столбцов " << i << "\n";
         fclose(in);
         return loaded_image;
 }
@@ -230,7 +276,7 @@ std::vector<int> load_image_to_vector(char* file_path) {
 void encode(char* file_name)
 {
         auto image_array = load_image_to_vector(file_name);
-        auto waleted_image = wavelet_transform(image_array);
+        // auto waleted_image = wavelet_transform(image_array);
         start_model();
         start_encoding();
 
@@ -256,40 +302,13 @@ void decode(char* file_name)
                 update_model(symbol);
                 image_array.push_back(symbol);
         }
-        
+
         for (auto i = 0; i < image_array.size(); ++i) {
                 int symbol = (int)image_array[i];
                 putc(symbol,out);
         }
 
         fclose(in_file);
-}
-
-
-
-
-// Запись в файл вспомогательной информации для вейвлет преобрзования
-void write_vector_to_file(const std::vector<double>& myVector)
-{
-    std::ofstream ofs(wavelet_info_file, std::ios::out | std::ofstream::binary);
-    std::ostream_iterator<char> osi{ ofs };
-    const char* beginByte = (char*)&myVector[0];
-
-    const char* endByte = (char*)&myVector.back() + sizeof(double);
-    std::copy(beginByte, endByte, osi);
-}
-
-// Чтение из файла вспомогательной информации для вейвлет преобразования
-std::vector<double> read_vector_from_file()
-{
-    std::vector<char> buffer{};
-    std::ifstream ifs(wavelet_info_file, std::ios::in | std::ifstream::binary);
-    std::istreambuf_iterator<char> iter(ifs);
-    std::istreambuf_iterator<char> end{};
-    std::copy(iter, end, std::back_inserter(buffer));
-    std::vector<double> newVector(buffer.size() / sizeof(double));
-    memcpy(&newVector[0], &buffer[0], buffer.size());
-    return newVector;
 }
 
 int main(int argc, char **argv)

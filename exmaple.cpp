@@ -80,7 +80,7 @@ int main() {
      int rr1,cc1;
          string nm = "db4";
          // Finding DWT output dimensions as the DWT output is zeropadded
-     dwt_output_dim(vec1, rr1, cc1 );
+     dwt_output_dim(ve c1, rr1, cc1 );
         int J = 2;
         vector<double> flag;
     vector<vector<double> >  dwt_output(rr1, vector<double>(cc1));
