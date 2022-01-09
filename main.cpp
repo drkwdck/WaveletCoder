@@ -253,29 +253,34 @@ std::vector<std::vector<double>> wavelet_transform(std::vector<std::vector<int>>
 } 
 
 // Загрузка изображения в массив
-std::vector<int> load_image_to_vector(char* file_path) { 
+std::vector<int> load_image_to_vector(char* file_path, int& width, int& height) { 
         auto in = fopen(file_path,"r+b");
         int symbol;
         std::vector<int> loaded_image;
 
-int i = 0;
+        std::ifstream get_size_stream(file_path);
+        unsigned char buf[8];
+
+        get_size_stream.seekg(16);
+        get_size_stream.read(reinterpret_cast<char*>(&buf), 8);
+
+        width = (buf[0] << 24) + (buf[1] << 16) + (buf[2] << 8) + (buf[3] << 0);
+        height = (buf[4] << 24) + (buf[5] << 16) + (buf[6] << 8) + (buf[7] << 0);
+
+    
         while ( (symbol=getc(in))!=EOF )
         {
                 loaded_image.push_back(symbol);
-
-                if (symbol == 255) {
-                        ++i;
-                } 
         }
 
-        std::cout <<"Столбцов " << i << "\n";
         fclose(in);
         return loaded_image;
 }
 
 void encode(char* file_name)
 {
-        auto image_array = load_image_to_vector(file_name);
+        int width, height;
+        auto image_array = load_image_to_vector(file_name, width, height);
         // auto waleted_image = wavelet_transform(image_array);
         start_model();
         start_encoding();
