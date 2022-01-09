@@ -1,32 +1,39 @@
-// Simplest & slowest version of arithmetic codec (almost demo version)
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include "lib/wavelet2s.h"
+#include <iterator>
+#include <cstring>
+
 //для избежания переполнения:	MAX_FREQUENCY * (TOP_VALUE+1) < ULONG_MAX 
 //число MAX_FREQUENCY должно быть не менее, чем в 4 раза меньше TOP_VALUE 
 //число символов NO_OF_CHARS должно быть много меньше MAX_FREQUENCY 
-#define BITS_IN_REGISTER			17	
-#define TOP_VALUE					(((unsigned long)1<<BITS_IN_REGISTER)-1)	// 1111...1
-#define FIRST_QTR					((TOP_VALUE>>2) +1)							// 0100...0
-#define HALF						(2*FIRST_QTR)								// 1000...0
-#define THIRD_QTR					(3*FIRST_QTR)								// 1100...0
-#define MAX_FREQUENCY				((unsigned)1<<15)
-#define NO_OF_CHARS					256
-#define EOF_SYMBOL					NO_OF_CHARS			// char-коды: 0..NO_OF_CHARS-1 
-#define NO_OF_SYMBOLS				(NO_OF_CHARS+1)		// + EOF_SYMBOL
+#define BITS_IN_REGISTER 17	
+#define TOP_VALUE (((unsigned long)1<<BITS_IN_REGISTER)-1)	// 1111...1
+#define FIRST_QTR ((TOP_VALUE>>2) +1)							// 0100...0
+#define HALF (2*FIRST_QTR)								// 1000...0
+#define THIRD_QTR (3*FIRST_QTR)								// 1100...0
+#define MAX_FREQUENCY ((unsigned)1<<15)
+#define NO_OF_CHARS 256
+#define EOF_SYMBOL NO_OF_CHARS			// char-коды: 0..NO_OF_CHARS-1 
+#define NO_OF_SYMBOLS (NO_OF_CHARS+1)		// + EOF_SYMBOL
 
-unsigned long						low, high, value;
-int									buffer, bits_to_go, garbage_bits, bits_to_follow;
-unsigned int						cum_freq[NO_OF_SYMBOLS+1];	//интервалы частот символов
+unsigned long low, high, value;
+int buffer, bits_to_go, garbage_bits, bits_to_follow;
+unsigned int cum_freq[NO_OF_SYMBOLS+1];	//интервалы частот символов
 // относительная частота появления символа s (оценка вероятности его появления)
 // определяется как p(s)=(cum_freq[s+1]-cum_freq[s])/cum_freq[NO_OF_SYMBOLS]
 
-FILE *in, *out; 
+FILE *out; 
+std::string  wavelet_info_file = "flag.bin";
+
 
 void start_model(void)	
-{ // исходно все символы в сообщении считаем равновероятными 
+{
+        // исходно все символы в сообщении считаем равновероятными 
 	for (int i=0; i<=NO_OF_SYMBOLS; i++)	cum_freq[i]=i;
 }
+
 inline void update_model(int symbol)
 {
         if (cum_freq[NO_OF_SYMBOLS]==MAX_FREQUENCY) 
@@ -44,7 +51,7 @@ inline void update_model(int symbol)
         for (int i=symbol+1; i<=NO_OF_SYMBOLS; i++) cum_freq[i]++;
 }
 
-inline int input_bit(void) // ввод 1 бита из сжатого файла
+inline int input_bit(FILE* in) // ввод 1 бита из сжатого файла
 {
         if (bits_to_go==0)
         {
@@ -94,6 +101,7 @@ inline void output_bit_plus_follow(int bit)
         }
 }
 
+
 void start_encoding(void)
 {
         bits_to_go		=8;				// свободно бит в битовом буфере вывода
@@ -109,19 +117,19 @@ void done_encoding(void)
         putc(buffer>>bits_to_go,out);				// записать незаполненный буфер
 }
 
-void start_decoding(void)
+void start_decoding(FILE* in)
 {
         bits_to_go		=0;				// свободно бит в битовом буфере ввода
         garbage_bits	=0;				// контроль числа "мусорных" бит в конце сжатого файла
         low				=0;				// нижняя граница интервала
         high			=TOP_VALUE;		// верхняя граница интервала
         value			=0;				// "ЧИСЛО"
-        for (int i=0; i<BITS_IN_REGISTER; i++) value=(value<<1)+input_bit();
+        for (int i=0; i<BITS_IN_REGISTER; i++) value=(value<<1)+input_bit(in);
 }
 
 void encode_symbol(int symbol)
 {
-		// пересчет границ интервала
+        // пересчет границ интервала
         unsigned long range;
         range=high-low+1;
         high=low	+range*cum_freq[symbol+1]/cum_freq[NO_OF_SYMBOLS] -1;
@@ -154,7 +162,7 @@ void encode_symbol(int symbol)
         }
 }
 
-int decode_symbol(void)
+int decode_symbol(FILE* in)
 {
         unsigned long range, cum;
         int symbol;
@@ -185,35 +193,103 @@ int decode_symbol(void)
                 else break;	// втягивать новый бит рано 
 				low<<=1;							// втягиваем новый бит 0
                 (high<<=1)++;						// втягиваем новый бит 1
-                value=(value<<1)+input_bit();		// втягиваем новый бит информации
+                value=(value<<1)+input_bit(in);		// втягиваем новый бит информации
         }
         return symbol;
 }
 
-void encode(void)
-{
+// Вейвлет преобразование
+std::vector<double> wavelet_transform(std::vector<int> image_array) {
+        int wavelet_levels_count = 2;
+        std::string nm = "db4";
+
+        std::vector<double> res;
+
+        for (auto i = 0; i < image_array.size(); ++i) {
+                res.push_back((double) image_array[i]);
+        }
+
+        return res;
+} 
+
+// Загрузка изображения в массив
+std::vector<int> load_image_to_vector(char* file_path) { 
+        auto in = fopen(file_path,"r+b");
         int symbol;
-        start_model();
-        start_encoding();
+        std::vector<int> loaded_image;
+
         while ( (symbol=getc(in))!=EOF )
         {
+                loaded_image.push_back(symbol);
+        }
+
+        fclose(in);
+        return loaded_image;
+}
+
+void encode(char* file_name)
+{
+        auto image_array = load_image_to_vector(file_name);
+        auto waleted_image = wavelet_transform(image_array);
+        start_model();
+        start_encoding();
+
+        for (auto i = 0; i < image_array.size(); ++i) {
+                int symbol = (int)image_array[i];
                 encode_symbol(symbol);
                 update_model(symbol);
         }
+
         encode_symbol(EOF_SYMBOL);
         done_encoding();
 }
 
-void decode(void)
+void decode(char* file_name)
 {
         int symbol;
         start_model();
-        start_decoding();
-        while ((symbol=decode_symbol())!=EOF_SYMBOL)
-        {
+        auto in_file = fopen(file_name, "r+b");
+        start_decoding(in_file);
+        std::vector<int> image_array;
+
+        while( (symbol = decode_symbol(in_file)) != EOF_SYMBOL) {
                 update_model(symbol);
+                image_array.push_back(symbol);
+        }
+        
+        for (auto i = 0; i < image_array.size(); ++i) {
+                int symbol = (int)image_array[i];
                 putc(symbol,out);
         }
+
+        fclose(in_file);
+}
+
+
+
+
+// Запись в файл вспомогательной информации для вейвлет преобрзования
+void write_vector_to_file(const std::vector<double>& myVector)
+{
+    std::ofstream ofs(wavelet_info_file, std::ios::out | std::ofstream::binary);
+    std::ostream_iterator<char> osi{ ofs };
+    const char* beginByte = (char*)&myVector[0];
+
+    const char* endByte = (char*)&myVector.back() + sizeof(double);
+    std::copy(beginByte, endByte, osi);
+}
+
+// Чтение из файла вспомогательной информации для вейвлет преобразования
+std::vector<double> read_vector_from_file()
+{
+    std::vector<char> buffer{};
+    std::ifstream ifs(wavelet_info_file, std::ios::in | std::ifstream::binary);
+    std::istreambuf_iterator<char> iter(ifs);
+    std::istreambuf_iterator<char> end{};
+    std::copy(iter, end, std::back_inserter(buffer));
+    std::vector<double> newVector(buffer.size() / sizeof(double));
+    memcpy(&newVector[0], &buffer[0], buffer.size());
+    return newVector;
 }
 
 int main(int argc, char **argv)
@@ -223,15 +299,17 @@ int main(int argc, char **argv)
         if ( argc!=4 ||  argv[1][0]!='e' && argv[1][0]!='d' ) {
                 printf("\nUsage: arcode e|d infile outfile \n");
         }
-        else if ( (in=fopen(argv[2],"r+b"))==NULL ) {
-                printf("\nIncorrect input file\n");
-        }
         else if ( (out=fopen(argv[3],"w+b"))==NULL ) {
                 printf("\nIncorrect output file\n");
         }
         else {
-                if (argv[1][0]=='e') encode(); else decode();
-                fclose(in);
+                if (argv[1][0]=='e') {
+                        encode(argv[2]);
+                }
+                else {
+                        decode(argv[2]);
+                }
+
                 fclose(out);
         }
 
