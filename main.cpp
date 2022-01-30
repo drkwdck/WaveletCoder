@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
-#include "lib/wavelet2s.h"
 #include <iterator>
+#include <vector>
 #include <cstring>
 
 //для избежания переполнения:	MAX_FREQUENCY * (TOP_VALUE+1) < ULONG_MAX 
@@ -221,36 +221,6 @@ std::vector<double> read_vector_from_file()
     memcpy(&newVector[0], &buffer[0], buffer.size());
     return newVector;
 }
-
-
-// Вейвлет преобразование
-std::vector<std::vector<double>> wavelet_transform(std::vector<std::vector<int>> image_array) {
-        int wavelet_levels_count = 2;
-        std::string nm = "db4";
-
-        // Приводим тип к double
-        std::vector<std::vector<double>> image_array_double;
-
-        for (auto i = 0; i < image_array.size(); ++i) {
-                image_array_double[i] = std::vector<double>(image_array[i].size());
-
-                for (auto j = 0; j < image_array[i].size(); ++j) {
-                        image_array_double[i].push_back((double) image_array[i][j]);
-                }
-        }
-
-        // Запускаем преобрзование
-        std::vector<double> flag;
-        int output_width, output_hight;
-        dwt_output_dim(image_array_double, output_width, output_hight);
-        std::vector<std::vector<double>> dwt_output(output_width, std::vector<double>(output_hight));
-
-        // dwt_2d(image_array_double, wavelet_levels_count, nm, dwt_output, flag);
-
-        write_vector_to_file(flag);
-
-        return dwt_output;
-} 
 
 // Загрузка изображения в массив
 std::vector<int> load_image_to_vector(char* file_path, int& width, int& height) { 
