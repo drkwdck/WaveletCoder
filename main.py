@@ -1,26 +1,38 @@
 import numpy as np
 import pywt
 import cv2
+import sys
 
-image = cv2.imread('/home/drkwdck/WaveletCoder/images/8-bit-256-x-256-Grayscale-Lena-Image.png', 0)
+
+output_dir = "wavelet_out/"
+mode = sys.argv[1]
+file_name = sys.argv[2]
+image = cv2.imread(file_name, 0)
 rows, cols = image.shape
-
 # Convert to float for more resolution for use with pywt
 image = np.float32(image)
 image /= 255
 
 x = image
 shape = x.shape
-level = 1
+level = 2
 # compute the 2D DWT
-c = pywt.wavedec2(x, 'db2', mode='periodization', level=level)
-[arr, (a, b, e)] = c
+coefs = pywt.wavedec2(x, 'db2', mode='periodization', level=level)
+
+# 1 4 7 7
+# 2 3 7 7
+# 5 5 6 6
+# 5 5 6 6
+[first, (second, third, fourth), (fifth, sixth, seventh)] = coefs
 
 # Номировать не нунжно, это все равно кодируется в рандомный поток байт, а не пикселей
-cv2.imwrite("asd.png", (arr*255).round())
-cv2.imwrite("a.png", (a*255).round())
-cv2.imwrite("b.png", (b*255).round())
-cv2.imwrite("e.png", (e*255).round())
+# TODO записывать в bin, а не в png
+cv2.imwrite("wavelet_out/first.png", first.round())
+cv2.imwrite("wavelet_out/second.png", second.round())
+cv2.imwrite("wavelet_out/third.png", third.round())
+cv2.imwrite("wavelet_out/fourth.png", fourth.round())
+cv2.imwrite("wavelet_out/fifth.png", fifth.round())
+cv2.imwrite("wavelet_out/sixth.png", sixth.round())
+cv2.imwrite("wavelet_out/seventh.png", seventh.round())
 
-orig = pywt.waverec2([arr, (a, b, e)], 'db2')
-cv2.imwrite("or.png", orig*255)
+
